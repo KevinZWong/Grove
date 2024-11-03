@@ -1,5 +1,7 @@
 import os
+import av
 from pinecone import Pinecone, ServerlessSpec
+from video_embedding import VideoEmbedding
 
 # Define API key and index parameters
 key = '4641190a-7251-4ae2-8ecd-b17623ecd3ae'
@@ -39,5 +41,3 @@ index.upsert(vectors)
 
 # Optional: Check list of indexes
 print("Available indexes:", pc.list_indexes().names())
-
-print("testing")

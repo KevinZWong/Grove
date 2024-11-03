@@ -495,3 +495,4 @@ six==1.16.0
 tqdm==4.66.5
 typing_extensions==4.12.2
 urllib3==2.2.3
+yt-dlp==2024.10.22
