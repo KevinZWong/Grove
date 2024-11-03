@@ -39,3 +39,5 @@ index.upsert(vectors)
 
 # Optional: Check list of indexes
 print("Available indexes:", pc.list_indexes().names())
+
+print("testing")
