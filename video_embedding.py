@@ -3,7 +3,6 @@ import numpy as np
 import torch
 from transformers import VivitImageProcessor, VivitModel
 from huggingface_hub import hf_hub_download
-
 import os
 import math
 np.random.seed(0)
@@ -76,26 +75,26 @@ class VideoEmbedding:
         return video_infos
 
 
-    def read_video_pyav(self, container, indices):
-        '''
-        Decode the video with PyAV decoder.
-        Args:
-            container (`av.container.input.InputContainer`): PyAV container.
-            indices (`List[int]`): List of frame indices to decode.
-        Returns:
-            result (np.ndarray): np array of decoded frames of shape (num_frames, height, width, 3).
-        '''
+
+    def read_video_pyav(self, container_path, indices):
         frames = []
-        container.seek(0)
         start_index = indices[0]
         end_index = indices[-1]
-        for i, frame in enumerate(container.decode(video=0)):
+
+        # Open the container with the appropriate hardware acceleration
+        container = av.open(container_path, options={'hwaccel': 'cuda', 'hwaccel_device': '0'})
+
+        stream = container.streams.video[0]
+        stream.thread_type = 'AUTO'
+
+        for i, frame in enumerate(container.decode(stream)):
             if i > end_index:
                 break
             if i >= start_index and i in indices:
-                frames.append(frame)
-        return np.stack([x.to_ndarray(format="rgb24") for x in frames])
-    
+                # Convert the frame to RGB numpy array
+                frames.append(frame.to_ndarray(format='rgb24'))
+
+        return np.stack(frames)
 
     def sample_frame_indices(self, total_frames, frame_sample_rate):
         '''
@@ -123,7 +122,7 @@ class VideoEmbedding:
                 outputs = self.model(**inputs)
                 last_hidden_states = outputs.last_hidden_state
             print(list(last_hidden_states.shape))
-            embeddings_batch_results.append(last_hidden_states.cpu()) # stores in RAM
+            embeddings_batch_results.append(last_hidden_states) # stores in RAM
 
         unbatched_embeddings = []
         for batch in embeddings_batch_results:
@@ -162,14 +161,12 @@ video_info_all = vid_emb.add_sample_rate(video_info_all, 0.3) # sample 30% of fr
 embeddings = {} #file_path : embedding
 
 for video in video_info_all:
-
     file_path = video["video_path"]
-    container = av.open(file_path)
     max_concurrent = 2 # 2 segments can be process concurrently on 2x3090
     sample_size = 5 #number pf embeddings to sample from result of processign batch of 32 frames
 
     total_indices = vid_emb.sample_frame_indices(video["frame_count"], video["sample_rate"])
-    frame_segments = [list(vid_emb.read_video_pyav(container=container, indices=indices)) for indices in total_indices]
+    frame_segments = [list(vid_emb.read_video_pyav(file_path, indices=indices)) for indices in total_indices]
     input_batch = vid_emb.split_batch(frame_segments, max_concurrent) 
     raw_embedding = vid_emb.get_embeddings(input_batch)
     video_embedding_average = vid_emb.average_embeddings(raw_embedding, sample_size)
