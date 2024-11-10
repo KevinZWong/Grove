@@ -8,4 +8,4 @@ The user can access a Flask application that:
 2. Scrolling down shows a video similar to the previous one.
 3. Scrolling left or right shows a random video from another category. Then scrolling down again shows a video similar to the current video.
 
-Video embeddings are created using the ViViT vision transformed and stored on a Pinecone vector database. These embeddings are used to find similar videos.
+Video embeddings are created using the ViViT vision transformer and stored on a Pinecone vector database. These embeddings are used to find similar videos.
